@@ -14,6 +14,11 @@ const (
 	ServiceName = types.CatServiceName
 )
 
+type runState struct {
+	shutdownChannel chan struct{}
+	wg              sync.WaitGroup
+}
+
 type Service struct {
 	ConfigService *config.Service  `di.inject:"configservice"`
 	LoggerService *logging.Service `di.inject:"loggingservice"`
@@ -23,15 +28,13 @@ type Service struct {
 
 	supportedCatStates map[string]types.CatState
 
-	shutdownChannel chan bool
-
 	initialized atomic.Bool
 	started     bool
-	stopped     bool
 
 	initOnce sync.Once
 	mu       sync.Mutex
-	wg       *sync.WaitGroup
+
+	currentRun *runState
 }
 
 // Initialize ensures the service is properly set up by initializing required components and loading configurations.
@@ -66,10 +69,6 @@ func (s *Service) Initialize() error {
 
 		s.initializeStateSet()
 
-		s.wg = &sync.WaitGroup{}
-
-		s.shutdownChannel = make(chan bool)
-
 		s.initialized.Store(true)
 	})
 
@@ -93,8 +92,13 @@ func (s *Service) Start() error {
 		return errors.New(op).Err(err).Msg("Failed to initialize serial port.")
 	}
 
-	s.launchWorkerThread(s.serialPortListener, "serialPortListener")
-	s.launchWorkerThread(s.serialPortSender, "serialPortSender")
+	run := &runState{
+		shutdownChannel: make(chan struct{}),
+	}
+	s.currentRun = run
+
+	s.launchWorkerThread(run, s.serialPortListener, "serialPortListener")
+	s.launchWorkerThread(run, s.serialPortSender, "serialPortSender")
 
 	s.started = true
 
@@ -114,19 +118,25 @@ func (s *Service) Stop() error {
 		return errors.New(op).Msg("Service not started.")
 	}
 
-	if s.shutdownChannel != nil {
-		close(s.shutdownChannel)
-		s.shutdownChannel = nil
+	run := s.currentRun
+	if run != nil && run.shutdownChannel != nil {
+		close(run.shutdownChannel)
 	}
 
-	if s.wg != nil {
-		s.wg.Wait()
+	if run != nil {
+		run.wg.Wait()
 	}
 
-	if err := s.serialPort.Close(); err != nil {
-		return errors.New(op).Msgf("Failed to close serial port: %v", err)
+	if s.serialPort != nil {
+		if err := s.serialPort.Close(); err != nil {
+			return errors.New(op).Msgf("Failed to close serial port: %v", err)
+		}
+		{
+			s.serialPort = nil
+		}
 	}
-	s.serialPort = nil
+
+	s.currentRun = nil
 	s.started = false
 
 	return nil

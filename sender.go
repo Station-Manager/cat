@@ -1,9 +1,9 @@
 package cat
 
-func (s *Service) serialPortSender() {
+func (s *Service) serialPortSender(shutdown <-chan struct{}) {
 	for {
 		select {
-		case <-s.shutdownChannel:
+		case <-shutdown:
 			return
 		}
 	}

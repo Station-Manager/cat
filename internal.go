@@ -58,12 +58,12 @@ func (s *Service) initializeStateSet() {
 }
 
 // launchWorkerThread starts a new goroutine for the given worker function and manages its lifecycle using a wait group.
-func (s *Service) launchWorkerThread(workerFunc func(), workerName string) {
-	s.wg.Add(1)
+func (s *Service) launchWorkerThread(run *runState, workerFunc func(<-chan struct{}), workerName string) {
+	run.wg.Add(1)
 	go func() {
-		defer s.wg.Done()
+		defer run.wg.Done()
 		s.LoggerService.InfoWith().Str("worker", workerName).Msg("CAT starting")
-		workerFunc()
+		workerFunc(run.shutdownChannel)
 		s.LoggerService.InfoWith().Str("worker", workerName).Msg("CAT stopped")
 	}()
 }

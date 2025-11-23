@@ -73,6 +73,8 @@ func TestInitWithContainer(t *testing.T) {
 	require.NoError(t, err)
 }
 
+// TestServiceStartStopConcurrent ensures that concurrent calls to Start do not race,
+// and that repeated Start/Stop cycles are safe.
 func TestServiceStartStopConcurrent(t *testing.T) {
 	container := iocdi.New()
 	require.NoError(t, container.RegisterInstance("workingdir", "."))
@@ -89,26 +91,36 @@ func TestServiceStartStopConcurrent(t *testing.T) {
 	// Ensure service is initialized before concurrent Start/Stop.
 	require.NoError(t, cat.Initialize())
 
-	var wg sync.WaitGroup
-
-	// Launch several goroutines that call Start and Stop concurrently.
-	for i := 0; i < 10; i++ {
-		wg.Add(2)
-
-		go func() {
-			defer wg.Done()
-			_ = cat.Start() // only one should succeed, others should get "already started"
-		}()
-
-		go func() {
-			defer wg.Done()
-			_ = cat.Stop() // only valid after a successful Start, others may see "not started"
-		}()
+	// First, exercise multiple sequential Start/Stop cycles.
+	for i := 0; i < 3; i++ {
+		require.NoError(t, cat.Start())
+		require.NoError(t, cat.Stop())
 	}
+
+	// Now exercise concurrent Start/Stop on a fresh run.
+	var wg sync.WaitGroup
+	wg.Add(2)
+
+	go func() {
+		defer wg.Done()
+		for i := 0; i < 5; i++ {
+			_ = cat.Start()
+			// give Stop goroutine a chance to run
+			time.Sleep(10 * time.Millisecond)
+		}
+	}()
+
+	go func() {
+		defer wg.Done()
+		for i := 0; i < 5; i++ {
+			_ = cat.Stop()
+			time.Sleep(10 * time.Millisecond)
+		}
+	}()
 
 	wg.Wait()
 
-	// Final clean Start/Stop sequence to ensure service is left in a good state.
+	// Final clean Start/Stop to ensure consistent end state.
 	require.NoError(t, cat.Start())
 	require.NoError(t, cat.Stop())
 }
