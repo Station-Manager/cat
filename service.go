@@ -42,8 +42,9 @@ type Service struct {
 
 	currentRun *runState
 
-	statusChannel chan types.CatStatus
-	sendChannel   chan types.CatCommand
+	statusChannel     chan types.CatStatus
+	sendChannel       chan types.CatCommand
+	processingChannel chan types.CatState
 }
 
 // Initialize ensures the service is properly set up by initializing required components and loading configurations.
@@ -91,6 +92,7 @@ func (s *Service) Initialize() error {
 		// the status stream is “latest-wins” so that the caller (the frontend) should not lag behind.
 		s.statusChannel = make(chan types.CatStatus, 1)
 		s.sendChannel = make(chan types.CatCommand, s.config.CatConfig.SendChannelSize)
+		s.processingChannel = make(chan types.CatState, s.config.CatConfig.ProcessingChannelSize)
 
 		s.initialized.Store(true)
 	})
@@ -98,7 +100,7 @@ func (s *Service) Initialize() error {
 	return initErr
 }
 
-// Start initializes and starts the service if it has been properly configured and is not already running.
+// Start initializes and starts the service if it has been properly configured and is not yet running.
 func (s *Service) Start() error {
 	const op errors.Op = "cat.Service.Start"
 	if !s.initialized.Load() {
@@ -123,6 +125,7 @@ func (s *Service) Start() error {
 
 	s.launchWorkerThread(run, s.serialPortListener, "serialPortListener")
 	s.launchWorkerThread(run, s.serialPortSender, "serialPortSender")
+	s.launchWorkerThread(run, s.lineProcessor, "lineProcessor")
 
 	s.started = true
 
@@ -182,6 +185,8 @@ func (s *Service) StatusChannel() (chan types.CatStatus, error) {
 	return s.statusChannel, nil
 }
 
+// EnqueueCommand queues a command with the given name and parameters for execution, ensuring the service is initialized
+// and started. Returns an error if the service is not ready, the command lookup fails, or the sendChannel is full or closed.
 func (s *Service) EnqueueCommand(cmdName cmd.CatCmdName, params ...string) error {
 	const op errors.Op = "cat.Service.EnqueueCommand"
 	if !s.initialized.Load() {

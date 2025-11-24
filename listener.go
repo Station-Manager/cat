@@ -22,7 +22,7 @@ func (s *Service) serialPortListener(shutdown <-chan struct{}) {
 		case <-shutdown:
 			return
 		case <-readTicker.C:
-			s.LoggerService.DebugWith().Msg("Serial port listener tick")
+			//s.LoggerService.DebugWith().Msg("Serial port listener tick")
 
 			// Prefer the CAT-level listener timeout when configured; otherwise fall
 			// back to the serial driver's read timeout. This keeps transport
@@ -37,8 +37,6 @@ func (s *Service) serialPortListener(shutdown <-chan struct{}) {
 			lineBytes, err := s.serialPort.ReadResponseBytes(ctx)
 			cancel()
 
-			s.LoggerService.DebugWith().Msgf("Read response: %s", lineBytes)
-
 			if err != nil {
 				if stderr.Is(err, context.DeadlineExceeded) {
 					continue
@@ -47,13 +45,26 @@ func (s *Service) serialPortListener(shutdown <-chan struct{}) {
 				continue
 			}
 
+			if len(lineBytes) == 0 {
+				continue
+			}
+
+			s.LoggerService.DebugWith().Msgf("Read response: %s", lineBytes)
+
 			state, ok := s.lookupCatState(lineBytes)
 			if !ok {
 				continue
 			}
 
 			// We are interested in this state, so send it for processing
-			s.LoggerService.DebugWith().Msgf("Found cat state: %s - %s", state.Prefix, lineBytes)
+			select {
+			case <-shutdown:
+				return
+			case s.processingChannel <- state:
+				// delivered
+			default:
+				// Drop to avoid blocking/backpressure
+			}
 		}
 	}
 }
@@ -85,6 +96,12 @@ func (s *Service) lookupCatState(line []byte) (types.CatState, bool) {
 			continue
 		}
 		if st, ok := s.supportedCatStates[key]; ok {
+			// Store the line minus the matched prefix (as a string) in Data field.
+			if len(line) >= l {
+				st.Data = string(line[l:])
+			} else {
+				st.Data = ""
+			}
 			return st, true
 		}
 	}
