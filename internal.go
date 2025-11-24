@@ -52,7 +52,7 @@ func (s *Service) initializeStateSet() {
 	for _, state := range s.config.CatStates {
 		key := strings.ToUpper(strings.TrimSpace(state.Prefix))
 		if key == "" {
-			// TODO: probably should log this?
+			s.LoggerService.ErrorWith().Msg("CAT state entry has an empty prefix")
 			continue
 		}
 		s.supportedCatStates[key] = state

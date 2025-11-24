@@ -10,10 +10,8 @@ func (s *Service) lineProcessor(shutdown <-chan struct{}) {
 		case <-shutdown:
 			return
 		case state := <-s.processingChannel:
-			s.LoggerService.DebugWith().Str("line", state.Data).Msg("Processing line")
 			if len(state.Markers) == 0 {
-				// No parsing required
-				s.LoggerService.DebugWith().Str("line", state.Data).Msg("No parsing required")
+				s.LoggerService.ErrorWith().Str("line", state.Data).Msg("Bad catState configuration; no markers defined. Skipping line.")
 				continue
 			}
 
@@ -52,26 +50,50 @@ func (s *Service) lineProcessor(shutdown <-chan struct{}) {
 				}
 			}
 
-			for {
-				select {
-				case <-shutdown:
-					return
-				case s.statusChannel <- status:
-					continue
-				default:
-					if cap(s.statusChannel) == 0 {
-						s.LoggerService.WarnWith().Msg("No consumer on unbuffered status channel, dropping status.")
-						return
-					}
-					// Try to discard one oldest item non-blockingly, then loop to retry to re-send.
-					select {
-					case <-s.statusChannel:
-						// discarded oldest; retry loop
-					default:
-						// nothing to discard (race); retry loop will attempt to send it again
-					}
-				}
+			if !s.sendStatusWithEviction(status, shutdown) {
+				return // Shutdown signaled
 			}
 		}
+	}
+}
+
+// sendStatusWithEviction attempts to send a status update to the status channel.
+// If the channel is full, it evicts the oldest status and retries.
+// For unbuffered channels, it drops the status with a warning.
+// Returns true if sent successfully, false if shutdown was signaled.
+func (s *Service) sendStatusWithEviction(status types.CatStatus, shutdown <-chan struct{}) bool {
+	for {
+		select {
+		case <-shutdown:
+			return false
+		case s.statusChannel <- status:
+			return true
+		default:
+			if !s.tryEvictOldestStatus(shutdown) {
+				return false
+			}
+			// Successfully evicted, loop will retry send
+		}
+	}
+}
+
+// tryEvictOldestStatus attempts to remove one item from the status channel to make room.
+// Returns false if the channel is unbuffered or shutdown is signaled, true otherwise.
+func (s *Service) tryEvictOldestStatus(shutdown <-chan struct{}) bool {
+	if cap(s.statusChannel) == 0 {
+		s.LoggerService.WarnWith().Msg("No consumer on unbuffered status channel, dropping status.")
+		return false
+	}
+
+	select {
+	case <-shutdown:
+		return false
+	case <-s.statusChannel:
+		s.LoggerService.DebugWith().Msg("Evicted oldest status from full channel")
+		return true
+	default:
+		// Channel became empty between checks (race condition)
+		// Return true to retry send - the channel likely has space now
+		return true
 	}
 }

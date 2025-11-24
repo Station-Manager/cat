@@ -223,7 +223,8 @@ func (s *Service) EnqueueCommand(cmdName cmd.CatCmdName, params ...string) error
 	pCmd.Cmd = fmt.Sprintf(catCmd.Cmd, paramsInterface...)
 	catCmd = *pCmd
 
-	//TODO: validate/sanitize command?
+	// Command is fully defined in configuration and already validated for format/arity,
+	// so no additional sanitization is required here.
 
 	if s.sendChannel != nil {
 		select {

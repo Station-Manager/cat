@@ -1,6 +1,7 @@
 package cat
 
 import (
+	"bytes"
 	"context"
 	stderr "errors"
 	"github.com/Station-Manager/types"
@@ -82,7 +83,7 @@ func (s *Service) lookupCatState(line []byte) (types.CatState, bool) {
 	}
 
 	// take the slice once, uppercase it for consistent lookup
-	prefixSlice := strings.ToUpper(string(line[:maxLen]))
+	prefixSlice := string(bytes.ToUpper(line[:maxLen]))
 
 	// try longest first to match multi-char prefixes (3..8) before 2-char ones
 	for l := maxLen; l >= minPrefix; l-- {
@@ -91,7 +92,7 @@ func (s *Service) lookupCatState(line []byte) (types.CatState, bool) {
 			continue
 		}
 		if st, ok := s.supportedCatStates[key]; ok {
-			// Store the line minus the matched prefix (as a string) in Data field.
+			// Store the line minus the matched prefix (as a string) in the Data field.
 			// At this point l is guaranteed to be <= len(line) because maxLen is bounded by len(line).
 			st.Data = string(line[l:])
 			return st, true
