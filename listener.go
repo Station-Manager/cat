@@ -17,6 +17,12 @@ func (s *Service) serialPortListener(shutdown <-chan struct{}) {
 	readTicker := time.NewTicker(s.config.CatConfig.ListenerRateLimiterInterval * time.Millisecond)
 	defer readTicker.Stop()
 
+	readTimeout := s.config.CatConfig.ListenerReadTimeoutMS
+	if readTimeout <= 0 {
+		readTimeout = defaultListenerReadTimeoutMS
+	}
+	readTimeout *= time.Millisecond
+
 	for {
 		select {
 		case <-shutdown:
@@ -24,15 +30,7 @@ func (s *Service) serialPortListener(shutdown <-chan struct{}) {
 		case <-readTicker.C:
 			//s.LoggerService.DebugWith().Msg("Serial port listener tick")
 
-			// Prefer the CAT-level listener timeout when configured; otherwise fall
-			// back to the serial driver's read timeout. This keeps transport
-			// concerns (SerialConfig) separate from CAT polling behavior.
-			readTimeout := s.config.CatConfig.ListenerReadTimeoutMS
-			if readTimeout <= 0 {
-				readTimeout = defaultListenerReadTimeoutMS
-			}
-
-			ctx, cancel := context.WithTimeout(context.Background(), readTimeout*time.Millisecond)
+			ctx, cancel := context.WithTimeout(context.Background(), readTimeout)
 
 			lineBytes, err := s.serialPort.ReadResponseBytes(ctx)
 			cancel()
@@ -49,7 +47,7 @@ func (s *Service) serialPortListener(shutdown <-chan struct{}) {
 				continue
 			}
 
-			s.LoggerService.DebugWith().Msgf("Read response: %s", lineBytes)
+			//			s.LoggerService.DebugWith().Msgf("Read response: %s", lineBytes)
 
 			state, ok := s.lookupCatState(lineBytes)
 			if !ok {
@@ -61,7 +59,7 @@ func (s *Service) serialPortListener(shutdown <-chan struct{}) {
 			case <-shutdown:
 				return
 			case s.processingChannel <- state:
-				// delivered
+				// delivered to the processing goroutine
 			default:
 				// Drop to avoid blocking/backpressure
 			}
@@ -98,7 +96,7 @@ func (s *Service) lookupCatState(line []byte) (types.CatState, bool) {
 		if st, ok := s.supportedCatStates[key]; ok {
 			// Store the line minus the matched prefix (as a string) in Data field.
 			if len(line) >= l {
-				st.Data = string(line[l:])
+				st.Data = string(line)
 			} else {
 				st.Data = ""
 			}

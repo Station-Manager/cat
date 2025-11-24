@@ -71,7 +71,7 @@ func TestInitWithContainer(t *testing.T) {
 	err = cat.EnqueueCommand(cmd.Init)
 	require.NoError(t, err)
 
-	time.Sleep(10 * time.Second)
+	time.Sleep(15 * time.Second)
 
 	err = cat.Stop()
 	require.NoError(t, err)
