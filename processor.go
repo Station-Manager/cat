@@ -57,7 +57,7 @@ func (s *Service) lineProcessor(shutdown <-chan struct{}) {
 				case <-shutdown:
 					return
 				case s.statusChannel <- status:
-					return
+					continue
 				default:
 					if cap(s.statusChannel) == 0 {
 						s.LoggerService.WarnWith().Msg("No consumer on unbuffered status channel, dropping status.")
