@@ -1,6 +1,7 @@
 package cat
 
 import (
+	"fmt"
 	"github.com/Station-Manager/cat/enums/cmd"
 	"github.com/Station-Manager/config"
 	"github.com/Station-Manager/errors"
@@ -42,6 +43,7 @@ type Service struct {
 	currentRun *runState
 
 	statusChannel chan types.CatStatus
+	sendChannel   chan types.CatCommand
 }
 
 // Initialize ensures the service is properly set up by initializing required components and loading configurations.
@@ -88,6 +90,7 @@ func (s *Service) Initialize() error {
 		// This channel is non-blocking and buffered to avoid deadlocks. Leaving it a 1 ensures that
 		// the status stream is “latest-wins” so that the caller (the frontend) should not lag behind.
 		s.statusChannel = make(chan types.CatStatus, 1)
+		s.sendChannel = make(chan types.CatCommand, s.config.CatConfig.SendChannelSize)
 
 		s.initialized.Store(true)
 	})
@@ -179,7 +182,7 @@ func (s *Service) StatusChannel() (chan types.CatStatus, error) {
 	return s.statusChannel, nil
 }
 
-func (s *Service) EnqueueCommand(cmd cmd.CatCmdName, params ...string) error {
+func (s *Service) EnqueueCommand(cmdName cmd.CatCmdName, params ...string) error {
 	const op errors.Op = "cat.Service.EnqueueCommand"
 	if !s.initialized.Load() {
 		return errors.New(op).Msg(errMsgServiceNotInit)
@@ -189,5 +192,29 @@ func (s *Service) EnqueueCommand(cmd cmd.CatCmdName, params ...string) error {
 		return errors.New(op).Msg(errMsgServiceNotStarted)
 	}
 
-	return nil
+	catCmd, err := s.commandLookup(cmdName)
+	if err != nil {
+		return errors.New(op).Msgf("Command lookup failed: %v", err)
+	}
+
+	paramsInterface := make([]interface{}, len(params))
+	for i, v := range params {
+		paramsInterface[i] = v
+	}
+
+	pCmd := &catCmd
+	pCmd.Cmd = fmt.Sprintf(catCmd.Cmd, paramsInterface...)
+	catCmd = *pCmd
+
+	//TODO: validate/sanitize command?
+
+	if s.sendChannel != nil {
+		select {
+		case s.sendChannel <- catCmd:
+			return nil
+		default:
+			return errors.New(op).Msg("Send channel is full.")
+		}
+	}
+	return errors.New(op).Msg("Send channel is closed.")
 }

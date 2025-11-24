@@ -1,6 +1,7 @@
 package cat
 
 import (
+	"github.com/Station-Manager/cat/enums/cmd"
 	"github.com/Station-Manager/config"
 	"github.com/Station-Manager/iocdi"
 	"github.com/Station-Manager/logging"
@@ -67,7 +68,10 @@ func TestInitWithContainer(t *testing.T) {
 	err = cat.Start()
 	require.NoError(t, err)
 
-	time.Sleep(5 * time.Second)
+	err = cat.EnqueueCommand(cmd.Init)
+	require.NoError(t, err)
+
+	time.Sleep(10 * time.Second)
 
 	err = cat.Stop()
 	require.NoError(t, err)

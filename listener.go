@@ -2,6 +2,7 @@ package cat
 
 import (
 	"context"
+	stderr "errors"
 	"github.com/Station-Manager/types"
 	"strings"
 	"time"
@@ -36,7 +37,12 @@ func (s *Service) serialPortListener(shutdown <-chan struct{}) {
 			lineBytes, err := s.serialPort.ReadResponseBytes(ctx)
 			cancel()
 
+			s.LoggerService.DebugWith().Msgf("Read response: %s", lineBytes)
+
 			if err != nil {
+				if stderr.Is(err, context.DeadlineExceeded) {
+					continue
+				}
 				s.LoggerService.ErrorWith().Err(err).Msg("serial read failed")
 				continue
 			}
@@ -45,7 +51,9 @@ func (s *Service) serialPortListener(shutdown <-chan struct{}) {
 			if !ok {
 				continue
 			}
-			s.LoggerService.DebugWith().Msgf("Found cat state: %s", state.Prefix)
+
+			// We are interested in this state, so send it for processing
+			s.LoggerService.DebugWith().Msgf("Found cat state: %s - %s", state.Prefix, lineBytes)
 		}
 	}
 }
