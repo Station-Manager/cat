@@ -12,6 +12,9 @@ import (
 
 const (
 	ServiceName = types.CatServiceName
+	// defaultListenerIntervalMS is used when the configured ListenerRateLimiterInterval
+	// is zero or negative, to avoid creating a ticker with a non-positive duration.
+	defaultListenerIntervalMS = 250
 )
 
 type runState struct {
@@ -68,6 +71,15 @@ func (s *Service) Initialize() error {
 			return
 		}
 
+		// Ensure sensible defaults for CAT timing configuration to avoid panics
+		// when creating tickers or timeouts with non-positive durations.
+		if cfg.CatConfig.ListenerRateLimiterInterval <= 0 {
+			cfg.CatConfig.ListenerRateLimiterInterval = defaultListenerIntervalMS
+		}
+		if cfg.CatConfig.ListenerReadTimeoutMS <= 0 {
+			cfg.CatConfig.ListenerReadTimeoutMS = cfg.SerialConfig.ReadTimeoutMS
+		}
+
 		s.config = cfg
 
 		s.initializeStateSet()
@@ -85,7 +97,7 @@ func (s *Service) Initialize() error {
 func (s *Service) Start() error {
 	const op errors.Op = "cat.Service.Start"
 	if !s.initialized.Load() {
-		return errors.New(op).Msg(errMsgSerivceNotInit)
+		return errors.New(op).Msg(errMsgServiceNotInit)
 	}
 
 	s.mu.Lock()
@@ -115,7 +127,7 @@ func (s *Service) Start() error {
 func (s *Service) Stop() error {
 	const op errors.Op = "cat.Service.Stop"
 	if !s.initialized.Load() {
-		return errors.New(op).Msg(errMsgSerivceNotInit)
+		return errors.New(op).Msg(errMsgServiceNotInit)
 	}
 
 	s.mu.Lock()
@@ -141,9 +153,7 @@ func (s *Service) Stop() error {
 		if err := s.serialPort.Close(); err != nil {
 			return errors.New(op).Msgf("Failed to close serial port: %v", err)
 		}
-		{
-			s.serialPort = nil
-		}
+		s.serialPort = nil
 	}
 
 	s.currentRun = nil
@@ -155,7 +165,7 @@ func (s *Service) Stop() error {
 func (s *Service) StatusChannel() (chan types.CatStatus, error) {
 	const op errors.Op = "cat.Service.StatusChannel"
 	if !s.initialized.Load() {
-		return nil, errors.New(op).Msg(errMsgSerivceNotInit)
+		return nil, errors.New(op).Msg(errMsgServiceNotInit)
 	}
 
 	if s.statusChannel == nil {

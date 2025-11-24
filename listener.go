@@ -9,32 +9,28 @@ import (
 
 // serialPortListener listens for and processes data from a serial port at a set interval until a shutdown signal is received.
 func (s *Service) serialPortListener(shutdown <-chan struct{}) {
-	readTicker := time.NewTicker(s.config.CatConfig.RateLimiterInterval * time.Millisecond)
+	readTicker := time.NewTicker(s.config.CatConfig.ListenerRateLimiterInterval * time.Millisecond)
 	defer readTicker.Stop()
-
-	var currentCancel context.CancelFunc
 
 	for {
 		select {
 		case <-shutdown:
-			if currentCancel != nil {
-				currentCancel()
-				currentCancel = nil
-			}
 			return
 		case <-readTicker.C:
 			s.LoggerService.DebugWith().Msg("Serial port listener tick")
-			if currentCancel != nil {
-				currentCancel()
-				currentCancel = nil
+
+			// Prefer the CAT-level listener timeout when configured; otherwise fall
+			// back to the serial driver's read timeout. This keeps transport
+			// concerns (SerialConfig) separate from CAT polling behavior while
+			// remaining backward-compatible.
+			readTimeout := s.config.CatConfig.ListenerReadTimeoutMS
+			if readTimeout <= 0 {
+				readTimeout = s.config.SerialConfig.ReadTimeoutMS
 			}
 
-			ctx, cancel := context.WithTimeout(context.Background(), s.config.SerialConfig.ReadTimeoutms*time.Millisecond)
-			currentCancel = cancel
+			ctx, cancel := context.WithTimeout(context.Background(), readTimeout*time.Millisecond)
 
 			lineBytes, err := s.serialPort.ReadResponseBytes(ctx)
-
-			currentCancel = nil
 			cancel()
 
 			if err != nil {

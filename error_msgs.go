@@ -4,5 +4,5 @@ var (
 	errMsgNilConfigService = "Config service is nil."
 	errMsgNilLoggerService = "Logger service is nil."
 	errMsgInvalidRigID     = "Invalid default rig ID."
-	errMsgSerivceNotInit   = "Service not initialized."
+	errMsgServiceNotInit   = "Service not initialized."
 )
