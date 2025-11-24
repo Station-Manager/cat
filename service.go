@@ -110,8 +110,9 @@ func (s *Service) Start() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	// If already started, treat Start as idempotent and return nil.
 	if s.started {
-		return errors.New(op).Msg("Service already started.")
+		return nil
 	}
 
 	if err := s.initializeSerialPort(); err != nil {

@@ -28,8 +28,6 @@ func (s *Service) serialPortListener(shutdown <-chan struct{}) {
 		case <-shutdown:
 			return
 		case <-readTicker.C:
-			//s.LoggerService.DebugWith().Msg("Serial port listener tick")
-
 			ctx, cancel := context.WithTimeout(context.Background(), readTimeout)
 
 			lineBytes, err := s.serialPort.ReadResponseBytes(ctx)
@@ -47,8 +45,6 @@ func (s *Service) serialPortListener(shutdown <-chan struct{}) {
 				continue
 			}
 
-			//			s.LoggerService.DebugWith().Msgf("Read response: %s", lineBytes)
-
 			state, ok := s.lookupCatState(lineBytes)
 			if !ok {
 				continue
@@ -62,6 +58,7 @@ func (s *Service) serialPortListener(shutdown <-chan struct{}) {
 				// delivered to the processing goroutine
 			default:
 				// Drop to avoid blocking/backpressure
+				s.LoggerService.DebugWith().Str("prefix", state.Prefix).Msg("dropping cat state: processing channel full")
 			}
 		}
 	}
@@ -95,11 +92,8 @@ func (s *Service) lookupCatState(line []byte) (types.CatState, bool) {
 		}
 		if st, ok := s.supportedCatStates[key]; ok {
 			// Store the line minus the matched prefix (as a string) in Data field.
-			if len(line) >= l {
-				st.Data = string(line)
-			} else {
-				st.Data = ""
-			}
+			// At this point l is guaranteed to be <= len(line) because maxLen is bounded by len(line).
+			st.Data = string(line[l:])
 			return st, true
 		}
 	}

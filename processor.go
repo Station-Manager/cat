@@ -20,11 +20,6 @@ func (s *Service) lineProcessor(shutdown <-chan struct{}) {
 			status := types.CatStatus{}
 
 			for _, marker := range state.Markers {
-				//s.LoggerService.DebugWith().Str("marker", marker.Tag).Msg("Marker")
-				//s.LoggerService.DebugWith().Int("index", marker.Index).Msg("Index")
-				//s.LoggerService.DebugWith().Int("length", marker.Length).Msg("Length")
-				//s.LoggerService.DebugWith().Str("state", state.Data[marker.Index:marker.Index+marker.Length]).Msg("State")
-
 				start := marker.Index
 				if start < 0 || start >= len(state.Data) {
 					s.LoggerService.WarnWith().Int("index", start).Msg("marker index out of range; skipping marker")
