@@ -36,6 +36,8 @@ type Service struct {
 	mu       sync.Mutex
 
 	currentRun *runState
+
+	statusChannel chan types.CatStatus
 }
 
 // Initialize ensures the service is properly set up by initializing required components and loading configurations.
@@ -70,6 +72,10 @@ func (s *Service) Initialize() error {
 
 		s.initializeStateSet()
 
+		// This channel is non-blocking and buffered to avoid deadlocks. Leaving it a 1 ensures that
+		// the status stream is “latest-wins” so that the caller (the frontend) should not lag behind.
+		s.statusChannel = make(chan types.CatStatus, 1)
+
 		s.initialized.Store(true)
 	})
 
@@ -79,7 +85,7 @@ func (s *Service) Initialize() error {
 func (s *Service) Start() error {
 	const op errors.Op = "cat.Service.Start"
 	if !s.initialized.Load() {
-		return errors.New(op).Msg("Service not initialized.")
+		return errors.New(op).Msg(errMsgSerivceNotInit)
 	}
 
 	s.mu.Lock()
@@ -109,7 +115,7 @@ func (s *Service) Start() error {
 func (s *Service) Stop() error {
 	const op errors.Op = "cat.Service.Stop"
 	if !s.initialized.Load() {
-		return errors.New(op).Msg("Service not initialized.")
+		return errors.New(op).Msg(errMsgSerivceNotInit)
 	}
 
 	s.mu.Lock()
@@ -123,6 +129,9 @@ func (s *Service) Stop() error {
 	if run != nil && run.shutdownChannel != nil {
 		close(run.shutdownChannel)
 	}
+	// NOTE: we do not close any of the other channels here, as they may be in use by other goroutines
+	// which would panic on 'send' if the channel were closed. All goroutines exit via shutdownChannel,
+	// so these channels will eventually become unreachable and be garbage-collected.
 
 	if run != nil {
 		run.wg.Wait()
@@ -141,4 +150,17 @@ func (s *Service) Stop() error {
 	s.started = false
 
 	return nil
+}
+
+func (s *Service) StatusChannel() (chan types.CatStatus, error) {
+	const op errors.Op = "cat.Service.StatusChannel"
+	if !s.initialized.Load() {
+		return nil, errors.New(op).Msg(errMsgSerivceNotInit)
+	}
+
+	if s.statusChannel == nil {
+		return nil, errors.New(op).Msg("Status channel is closed.")
+	}
+
+	return s.statusChannel, nil
 }
