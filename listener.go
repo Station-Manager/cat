@@ -7,6 +7,7 @@ import (
 	"time"
 )
 
+// serialPortListener listens for and processes data from a serial port at a set interval until a shutdown signal is received.
 func (s *Service) serialPortListener(shutdown <-chan struct{}) {
 	readTicker := time.NewTicker(s.config.CatConfig.RateLimiterInterval * time.Millisecond)
 	defer readTicker.Stop()
@@ -28,7 +29,7 @@ func (s *Service) serialPortListener(shutdown <-chan struct{}) {
 				currentCancel = nil
 			}
 
-			ctx, cancel := context.WithTimeout(context.Background(), s.config.SerialConfig.ReadTimeout*time.Millisecond)
+			ctx, cancel := context.WithTimeout(context.Background(), s.config.SerialConfig.ReadTimeoutms*time.Millisecond)
 			currentCancel = cancel
 
 			lineBytes, err := s.serialPort.ReadResponseBytes(ctx)
@@ -50,6 +51,7 @@ func (s *Service) serialPortListener(shutdown <-chan struct{}) {
 	}
 }
 
+// lookupCatState attempts to find a CatState based on the byte slice prefix, returning the state and a success indicator.
 func (s *Service) lookupCatState(line []byte) (types.CatState, bool) {
 	const minPrefix = 2
 
