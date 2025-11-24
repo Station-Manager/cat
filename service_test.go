@@ -178,7 +178,7 @@ func TestEnqueueCommandFormatValidation(t *testing.T) {
 		sendChannel:   make(chan types.CatCommand, 1),
 	}
 	service.initialized.Store(true)
-	service.started = true
+	service.started.Store(true)
 
 	// Happy path: correct parameter count.
 	err := service.EnqueueCommand(cmd.Init, "one", "two")
@@ -193,4 +193,33 @@ func TestEnqueueCommandFormatValidation(t *testing.T) {
 	err = service.EnqueueCommand(cmd.Init, "one", "two", "three")
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "Command parameter validation failed")
+}
+
+// TestInitializeFailsOnEmptyCatStatePrefix verifies that the service
+// initialization fails fast when a CatState has an empty prefix.
+func TestInitializeFailsOnEmptyCatStatePrefix(t *testing.T) {
+	cfgService := &config.Service{}
+	loggerService := &logging.Service{}
+
+	service := &Service{
+		ConfigService: cfgService,
+		LoggerService: loggerService,
+	}
+
+	// RigConfig with a single CatState that has an empty prefix.
+	rigCfg := types.RigConfig{
+		CatStates: []types.CatState{{
+			Prefix: " ", // whitespace-only, should be treated as empty
+		}},
+	}
+
+	// Stub out getRigConfig by assigning the config directly and bypassing
+	// the normal ConfigService plumbing. Since Initialize ultimately calls
+	// initializeStateSet, we can invoke it deterministically here.
+	service.config = &rigCfg
+
+	// Directly call initializeStateSet to validate behavior.
+	err := service.initializeStateSet()
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "CAT state entry has an empty prefix")
 }

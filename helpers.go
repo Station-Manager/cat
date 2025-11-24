@@ -17,7 +17,7 @@ func validateConfig(cfg *types.RigConfig) error {
 
 	err := validate.Struct(cfg)
 	if err != nil {
-		return err
+		return errors.New(op).Err(err)
 	}
 
 	return nil

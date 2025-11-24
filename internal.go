@@ -45,15 +45,16 @@ func (s *Service) initializeSerialPort() error {
 }
 
 // initializeStateSet initializes the supportedCatStates map based on the configured CatState values in the service.
-func (s *Service) initializeStateSet() {
+func (s *Service) initializeStateSet() error {
+	const op errors.Op = "cat.Service.initializeStateSet"
 	s.supportedCatStates = make(map[string]types.CatState, len(s.config.CatStates))
 
 	maxLen := 0
 	for _, state := range s.config.CatStates {
 		key := strings.ToUpper(strings.TrimSpace(state.Prefix))
 		if key == "" {
-			s.LoggerService.ErrorWith().Msg("CAT state entry has an empty prefix")
-			continue
+			// Treat empty prefixes as configuration errors instead of silently logging.
+			return errors.New(op).Msg("CAT state entry has an empty prefix")
 		}
 		s.supportedCatStates[key] = state
 		if l := len(key); l > maxLen {
@@ -62,6 +63,7 @@ func (s *Service) initializeStateSet() {
 	}
 
 	s.maxCatPrefixLen = maxLen
+	return nil
 }
 
 // launchWorkerThread starts a new goroutine for the given worker function and manages its lifecycle using a wait group.

@@ -35,7 +35,7 @@ type Service struct {
 	maxCatPrefixLen    int
 
 	initialized atomic.Bool
-	started     bool
+	started     atomic.Bool // guarded via atomic operations; Start/Stop also hold mu for broader state
 
 	initOnce sync.Once
 	mu       sync.Mutex
@@ -70,8 +70,7 @@ func (s *Service) Initialize() error {
 			return
 		}
 
-		if err = validateConfig(cfg); err != nil {
-			initErr = err
+		if initErr = validateConfig(cfg); initErr != nil {
 			return
 		}
 
@@ -86,7 +85,9 @@ func (s *Service) Initialize() error {
 
 		s.config = cfg
 
-		s.initializeStateSet()
+		if initErr = s.initializeStateSet(); initErr != nil {
+			return
+		}
 
 		// This channel is non-blocking and buffered to avoid deadlocks. Leaving it a 1 ensures that
 		// the status stream is “latest-wins” so that the caller (the frontend) should not lag behind.
@@ -111,7 +112,7 @@ func (s *Service) Start() error {
 	defer s.mu.Unlock()
 
 	// If already started, treat Start as idempotent and return nil.
-	if s.started {
+	if s.started.Load() {
 		return nil
 	}
 
@@ -128,7 +129,7 @@ func (s *Service) Start() error {
 	s.launchWorkerThread(run, s.serialPortSender, "serialPortSender")
 	s.launchWorkerThread(run, s.lineProcessor, "lineProcessor")
 
-	s.started = true
+	s.started.Store(true)
 
 	return nil
 }
@@ -144,7 +145,7 @@ func (s *Service) Stop() error {
 	defer s.mu.Unlock()
 
 	// If not started, treat Stop as idempotent and return nil.
-	if !s.started {
+	if !s.started.Load() {
 		return nil
 	}
 
@@ -159,7 +160,10 @@ func (s *Service) Stop() error {
 	}
 	// NOTE: we do not close any of the other channels here, as they may be in use by other goroutines
 	// which would panic on 'send' if the channel were closed. All goroutines exit via shutdownChannel,
-	// so these channels will eventually become unreachable and be garbage-collected.
+	// so these channels will eventually become unreachable and be garbage-collected rather than being
+	// explicitly closed. This design avoids close-while-send races at the cost of relying on the Go
+	// runtime's garbage collector to reclaim channel resources once the Service is stopped and no
+	// references remain.
 
 	if run != nil {
 		run.wg.Wait()
@@ -173,7 +177,7 @@ func (s *Service) Stop() error {
 	}
 
 	s.currentRun = nil
-	s.started = false
+	s.started.Store(false)
 
 	return nil
 }
@@ -200,7 +204,7 @@ func (s *Service) EnqueueCommand(cmdName cmd.CatCmdName, params ...string) error
 		return errors.New(op).Msg(errMsgServiceNotInit)
 	}
 
-	if !s.started {
+	if !s.started.Load() {
 		return errors.New(op).Msg(errMsgServiceNotStarted)
 	}
 
