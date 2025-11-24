@@ -85,3 +85,19 @@ func (s *Service) commandLookup(name cmd.CatCmdName) (types.CatCommand, error) {
 	}
 	return types.CatCommand{}, errors.New(op).Msgf("command %s not found", name)
 }
+
+// validateCommandFormat checks the format of the command string against the provided parameters.
+// It returns an error if the number of parameters does not match the format specifiers.
+func (s *Service) validateCommandFormat(command string, params ...interface{}) error {
+	const op errors.Op = "cat.Service.validateCommandFormat"
+
+	// Count the number of %s in the command string as a simple way to validate format specifiers.
+	expectedParams := strings.Count(command, "%s")
+	providedParams := len(params)
+
+	if expectedParams != providedParams {
+		return errors.New(op).Msgf("invalid command format: expected %d parameters, got %d", expectedParams, providedParams)
+	}
+
+	return nil
+}

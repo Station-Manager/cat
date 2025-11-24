@@ -143,13 +143,19 @@ func (s *Service) Stop() error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
+	// If not started, treat Stop as idempotent and return nil.
 	if !s.started {
-		return errors.New(op).Msg(errMsgServiceNotStarted)
+		return nil
 	}
 
 	run := s.currentRun
 	if run != nil && run.shutdownChannel != nil {
-		close(run.shutdownChannel)
+		select {
+		case <-run.shutdownChannel:
+			// already closed; nothing to do
+		default:
+			close(run.shutdownChannel)
+		}
 	}
 	// NOTE: we do not close any of the other channels here, as they may be in use by other goroutines
 	// which would panic on 'send' if the channel were closed. All goroutines exit via shutdownChannel,
@@ -173,7 +179,7 @@ func (s *Service) Stop() error {
 }
 
 // StatusChannel returns a channel for monitoring cat status changes or an error if the service is uninitialized or closed.
-func (s *Service) StatusChannel() (chan types.CatStatus, error) {
+func (s *Service) StatusChannel() (<-chan types.CatStatus, error) {
 	const op errors.Op = "cat.Service.StatusChannel"
 	if !s.initialized.Load() {
 		return nil, errors.New(op).Msg(errMsgServiceNotInit)
@@ -206,6 +212,11 @@ func (s *Service) EnqueueCommand(cmdName cmd.CatCmdName, params ...string) error
 	paramsInterface := make([]interface{}, len(params))
 	for i, v := range params {
 		paramsInterface[i] = v
+	}
+
+	// Validate the format string against provided parameters to avoid runtime panics from fmt.Sprintf.
+	if err := s.validateCommandFormat(catCmd.Cmd, paramsInterface...); err != nil {
+		return errors.New(op).Err(err).Msg("Command parameter validation failed")
 	}
 
 	pCmd := &catCmd

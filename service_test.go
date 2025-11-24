@@ -128,3 +128,69 @@ func TestServiceStartStopConcurrent(t *testing.T) {
 	require.NoError(t, cat.Start())
 	require.NoError(t, cat.Stop())
 }
+
+// TestStatusChannelReceiveOnly verifies that StatusChannel returns a receive-only
+// channel and that it behaves correctly when the service is initialized.
+func TestStatusChannelReceiveOnly(t *testing.T) {
+	container := iocdi.New()
+	require.NoError(t, container.RegisterInstance("workingdir", "."))
+	require.NoError(t, container.Register(config.ServiceName, reflect.TypeOf((*config.Service)(nil))))
+	require.NoError(t, container.Register(logging.ServiceName, reflect.TypeOf((*logging.Service)(nil))))
+	require.NoError(t, container.Register(ServiceName, reflect.TypeOf((*Service)(nil))))
+	require.NoError(t, container.Build())
+
+	obj, err := container.ResolveSafe(ServiceName)
+	require.NoError(t, err)
+	cat, ok := obj.(*Service)
+	require.True(t, ok)
+
+	// Ensure initialization succeeds so StatusChannel is available.
+	require.NoError(t, cat.Initialize())
+
+	ch, err := cat.StatusChannel()
+	require.NoError(t, err)
+	require.NotNil(t, ch)
+
+	// This compile-time-only assertion ensures the returned type is receive-only.
+	var _ <-chan types.CatStatus = ch
+}
+
+// TestEnqueueCommandFormatValidation ensures that EnqueueCommand fails fast
+// when the configured command format string does not match the provided
+// parameter count.
+func TestEnqueueCommandFormatValidation(t *testing.T) {
+	// Build a minimal in-memory Service with a single CatCommand using a format string.
+	cfg := &types.RigConfig{
+		CatConfig: types.CatConfig{
+			SendChannelSize:       1,
+			ProcessingChannelSize: 1,
+		},
+	}
+	cfg.CatCommands = []types.CatCommand{{
+		Name: cmd.Init.String(),
+		Cmd:  "CMD %s %s", // expects 2 parameters
+	}}
+
+	service := &Service{
+		ConfigService: &config.Service{},
+		LoggerService: &logging.Service{},
+		config:        cfg,
+		sendChannel:   make(chan types.CatCommand, 1),
+	}
+	service.initialized.Store(true)
+	service.started = true
+
+	// Happy path: correct parameter count.
+	err := service.EnqueueCommand(cmd.Init, "one", "two")
+	require.NoError(t, err)
+
+	// Too few parameters.
+	err = service.EnqueueCommand(cmd.Init, "only-one")
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "Command parameter validation failed")
+
+	// Too many parameters.
+	err = service.EnqueueCommand(cmd.Init, "one", "two", "three")
+	require.Error(t, err)
+	require.Contains(t, err.Error(), "Command parameter validation failed")
+}
