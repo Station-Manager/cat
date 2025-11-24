@@ -27,6 +27,7 @@ type Service struct {
 	serialPort *serial.Port
 
 	supportedCatStates map[string]types.CatState
+	maxCatPrefixLen    int
 
 	initialized atomic.Bool
 	started     bool

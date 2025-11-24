@@ -47,6 +47,7 @@ func (s *Service) initializeSerialPort() error {
 func (s *Service) initializeStateSet() {
 	s.supportedCatStates = make(map[string]types.CatState, len(s.config.CatStates))
 
+	maxLen := 0
 	for _, state := range s.config.CatStates {
 		key := strings.ToUpper(strings.TrimSpace(state.Prefix))
 		if key == "" {
@@ -54,7 +55,12 @@ func (s *Service) initializeStateSet() {
 			continue
 		}
 		s.supportedCatStates[key] = state
+		if l := len(key); l > maxLen {
+			maxLen = l
+		}
 	}
+
+	s.maxCatPrefixLen = maxLen
 }
 
 // launchWorkerThread starts a new goroutine for the given worker function and manages its lifecycle using a wait group.
