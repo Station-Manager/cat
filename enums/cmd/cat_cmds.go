@@ -1,13 +1,13 @@
 package cmd
 
-type CatCmd string
+type CatCmdName string
 
-func (cc CatCmd) String() string {
+func (cc CatCmdName) String() string {
 	return string(cc)
 }
 
 const (
-	Init     CatCmd = "INIT"
-	Read     CatCmd = "READ"
-	PlayBack CatCmd = "PLAYBACK"
+	Init     CatCmdName = "INIT"
+	Read     CatCmdName = "READ"
+	PlayBack CatCmdName = "PLAYBACK"
 )

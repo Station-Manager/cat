@@ -1,6 +1,7 @@
 package cat
 
 import (
+	"github.com/Station-Manager/cat/enums/cmd"
 	"github.com/Station-Manager/config"
 	"github.com/Station-Manager/errors"
 	"github.com/Station-Manager/logging"
@@ -94,6 +95,7 @@ func (s *Service) Initialize() error {
 	return initErr
 }
 
+// Start initializes and starts the service if it has been properly configured and is not already running.
 func (s *Service) Start() error {
 	const op errors.Op = "cat.Service.Start"
 	if !s.initialized.Load() {
@@ -124,6 +126,7 @@ func (s *Service) Start() error {
 	return nil
 }
 
+// Stop safely stops the service by shutting down active processes, releasing resources, and closing the serial port.
 func (s *Service) Stop() error {
 	const op errors.Op = "cat.Service.Stop"
 	if !s.initialized.Load() {
@@ -134,7 +137,7 @@ func (s *Service) Stop() error {
 	defer s.mu.Unlock()
 
 	if !s.started {
-		return errors.New(op).Msg("Service not started.")
+		return errors.New(op).Msg(errMsgServiceNotStarted)
 	}
 
 	run := s.currentRun
@@ -162,6 +165,7 @@ func (s *Service) Stop() error {
 	return nil
 }
 
+// StatusChannel returns a channel for monitoring cat status changes or an error if the service is uninitialized or closed.
 func (s *Service) StatusChannel() (chan types.CatStatus, error) {
 	const op errors.Op = "cat.Service.StatusChannel"
 	if !s.initialized.Load() {
@@ -173,4 +177,17 @@ func (s *Service) StatusChannel() (chan types.CatStatus, error) {
 	}
 
 	return s.statusChannel, nil
+}
+
+func (s *Service) EnqueueCommand(cmd cmd.CatCmdName, params ...string) error {
+	const op errors.Op = "cat.Service.EnqueueCommand"
+	if !s.initialized.Load() {
+		return errors.New(op).Msg(errMsgServiceNotInit)
+	}
+
+	if !s.started {
+		return errors.New(op).Msg(errMsgServiceNotStarted)
+	}
+
+	return nil
 }
