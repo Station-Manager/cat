@@ -8,7 +8,7 @@ require (
 	github.com/Station-Manager/iocdi v0.0.1
 	github.com/Station-Manager/logging v0.0.7
 	github.com/Station-Manager/serial v0.0.4
-	github.com/Station-Manager/types v0.0.23
+	github.com/Station-Manager/types v0.0.24
 	github.com/go-playground/validator/v10 v10.28.0
 	github.com/stretchr/testify v1.11.1
 )

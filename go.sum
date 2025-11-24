@@ -8,8 +8,8 @@ github.com/Station-Manager/logging v0.0.7 h1:SW6zWyid/7tYJKoQmNR1XzeVZR4P1O1/4iI
 github.com/Station-Manager/logging v0.0.7/go.mod h1:sqK28EbDlFFys7VA9br4HWeHk2KDu7Clc1s9LT1C0Pk=
 github.com/Station-Manager/serial v0.0.4 h1:+gYNVqkCcnReTy6bRyl33ri/CiYMK5cDNl6v/tlojdM=
 github.com/Station-Manager/serial v0.0.4/go.mod h1:XqidPgzDkUFRuHaVAPFlcoAKJLnpIA3DbTbfBVkOV94=
-github.com/Station-Manager/types v0.0.23 h1:EYu/slPL0aYMf5bCbAe61VuwBzKEtIcfvgxs1jFvbPQ=
-github.com/Station-Manager/types v0.0.23/go.mod h1:b6JU4edbW+yGlXKIwWjqS7ffDjH6a8l/z6k5/H5w4kM=
+github.com/Station-Manager/types v0.0.24 h1:Opz9WJ0y8k2cwGlYUTf01onWh2EcFhJXygu1zoOm/W4=
+github.com/Station-Manager/types v0.0.24/go.mod h1:b6JU4edbW+yGlXKIwWjqS7ffDjH6a8l/z6k5/H5w4kM=
 github.com/Station-Manager/utils v0.0.2 h1:/YHe/Yvx03eTBoBoSN2YnyEF/Zy67NKeahRcapkfqLQ=
 github.com/Station-Manager/utils v0.0.2/go.mod h1:6J2fGU4xpoe1PpLEWfgUs8fjKp/+v7wCzpvek2jiWpI=
 github.com/coreos/go-systemd/v22 v22.5.0/go.mod h1:Y58oyj3AT4RCenI/lSvhwexgC+NSVTIJ3seZv2GcEnc=
