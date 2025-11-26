@@ -3,11 +3,9 @@ package cat
 import (
 	"github.com/Station-Manager/cat/enums/cmd"
 	"github.com/Station-Manager/config"
-	"github.com/Station-Manager/iocdi"
 	"github.com/Station-Manager/logging"
 	"github.com/Station-Manager/types"
 	"github.com/stretchr/testify/require"
-	"reflect"
 	"sync"
 	"testing"
 	"time"
@@ -50,47 +48,56 @@ func TestInitFailureInvalidRigID(t *testing.T) {
 	//require.Contains(t, err.Error(), errMsgInvalidRigID)
 }
 
+// helper to build a minimal, valid ConfigService for tests.
+func newTestConfigService(t *testing.T) *config.Service {
+	t.Helper()
+	cfgService := &config.Service{
+		AppConfig: types.AppConfig{
+			RequiredConfigs: types.RequiredConfigs{DefaultRigID: 1},
+			RigConfigs: []types.RigConfig{{
+				ID:           1,
+				SerialConfig: types.SerialConfig{},
+				CatConfig: types.CatConfig{
+					SendChannelSize:       1,
+					ProcessingChannelSize: 1,
+				},
+			}},
+		},
+	}
+	// Mark the config service as initialized so RequiredConfigs/RigConfigByID work.
+	require.NoError(t, cfgService.Initialize())
+	return cfgService
+}
+
 func TestInitWithContainer(t *testing.T) {
-	container := iocdi.New()
-	require.NoError(t, container.RegisterInstance("workingdir", "."))
-	require.NoError(t, container.Register(config.ServiceName, reflect.TypeOf((*config.Service)(nil))))
-	require.NoError(t, container.Register(logging.ServiceName, reflect.TypeOf((*logging.Service)(nil))))
-	require.NoError(t, container.Register(ServiceName, reflect.TypeOf((*Service)(nil))))
-	require.NoError(t, container.Build())
+	// This test now verifies initialization and basic start/stop without IOCDI.
+	cfgService := newTestConfigService(t)
+	loggerService := &logging.Service{}
 
-	obj, err := container.ResolveSafe(ServiceName)
-	require.NoError(t, err)
-	require.NotNil(t, obj)
+	cat := &Service{
+		ConfigService: cfgService,
+		LoggerService: loggerService,
+	}
 
-	cat, ok := obj.(*Service)
-	require.True(t, ok)
+	require.NoError(t, cat.Initialize())
 
-	err = cat.Start()
-	require.NoError(t, err)
+	require.NoError(t, cat.Start())
+	require.NoError(t, cat.EnqueueCommand(cmd.Init))
 
-	err = cat.EnqueueCommand(cmd.Init)
-	require.NoError(t, err)
+	// Allow workers to spin briefly.
+	time.Sleep(50 * time.Millisecond)
 
-	time.Sleep(15 * time.Second)
-
-	err = cat.Stop()
-	require.NoError(t, err)
+	require.NoError(t, cat.Stop())
 }
 
 // TestServiceStartStopConcurrent ensures that concurrent calls to Start do not race,
 // and that repeated Start/Stop cycles are safe.
 func TestServiceStartStopConcurrent(t *testing.T) {
-	container := iocdi.New()
-	require.NoError(t, container.RegisterInstance("workingdir", "."))
-	require.NoError(t, container.Register(config.ServiceName, reflect.TypeOf((*config.Service)(nil))))
-	require.NoError(t, container.Register(logging.ServiceName, reflect.TypeOf((*logging.Service)(nil))))
-	require.NoError(t, container.Register(ServiceName, reflect.TypeOf((*Service)(nil))))
-	require.NoError(t, container.Build())
-
-	obj, err := container.ResolveSafe(ServiceName)
-	require.NoError(t, err)
-	cat, ok := obj.(*Service)
-	require.True(t, ok)
+	cfgService := newTestConfigService(t)
+	cat := &Service{
+		ConfigService: cfgService,
+		LoggerService: &logging.Service{},
+	}
 
 	// Ensure service is initialized before concurrent Start/Stop.
 	require.NoError(t, cat.Initialize())
@@ -132,17 +139,11 @@ func TestServiceStartStopConcurrent(t *testing.T) {
 // TestStatusChannelReceiveOnly verifies that StatusChannel returns a receive-only
 // channel and that it behaves correctly when the service is initialized.
 func TestStatusChannelReceiveOnly(t *testing.T) {
-	container := iocdi.New()
-	require.NoError(t, container.RegisterInstance("workingdir", "."))
-	require.NoError(t, container.Register(config.ServiceName, reflect.TypeOf((*config.Service)(nil))))
-	require.NoError(t, container.Register(logging.ServiceName, reflect.TypeOf((*logging.Service)(nil))))
-	require.NoError(t, container.Register(ServiceName, reflect.TypeOf((*Service)(nil))))
-	require.NoError(t, container.Build())
-
-	obj, err := container.ResolveSafe(ServiceName)
-	require.NoError(t, err)
-	cat, ok := obj.(*Service)
-	require.True(t, ok)
+	cfgService := newTestConfigService(t)
+	cat := &Service{
+		ConfigService: cfgService,
+		LoggerService: &logging.Service{},
+	}
 
 	// Ensure initialization succeeds so StatusChannel is available.
 	require.NoError(t, cat.Initialize())
