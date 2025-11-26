@@ -240,3 +240,12 @@ func (s *Service) EnqueueCommand(cmdName cmd.CatCmdName, params ...string) error
 	}
 	return errors.New(op).Msg("Send channel is closed.")
 }
+
+// RigConfig returns the rig configuration for the service, or an empty configuration if the service is not initialized.
+// This provides a copy of the current rig configuration, for other consumers, e.g., frontend facades.
+func (s *Service) RigConfig() types.RigConfig {
+	if s.config == nil {
+		return types.RigConfig{}
+	}
+	return *s.config
+}
