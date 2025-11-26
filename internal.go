@@ -1,7 +1,7 @@
 package cat
 
 import (
-	"github.com/Station-Manager/cat/enums/cmd"
+	"github.com/Station-Manager/enums/cmds"
 	"github.com/Station-Manager/errors"
 	"github.com/Station-Manager/serial"
 	"github.com/Station-Manager/types"
@@ -78,7 +78,7 @@ func (s *Service) launchWorkerThread(run *runState, workerFunc func(<-chan struc
 }
 
 // commandLookup retrieves a CatCommand by its name from the service configuration. Returns an error if the command is not found.
-func (s *Service) commandLookup(name cmd.CatCmdName) (types.CatCommand, error) {
+func (s *Service) commandLookup(name cmds.CatCmdName) (types.CatCommand, error) {
 	const op errors.Op = "cat.Service.commandLookup"
 	for _, c := range s.config.CatCommands {
 		if c.Name == name.String() {

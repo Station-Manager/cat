@@ -1,8 +1,8 @@
 package cat
 
 import (
-	"github.com/Station-Manager/cat/enums/cmd"
 	"github.com/Station-Manager/config"
+	"github.com/Station-Manager/enums/cmds"
 	"github.com/Station-Manager/logging"
 	"github.com/Station-Manager/types"
 	"github.com/stretchr/testify/require"
@@ -82,7 +82,7 @@ func TestInitWithContainer(t *testing.T) {
 	require.NoError(t, cat.Initialize())
 
 	require.NoError(t, cat.Start())
-	require.NoError(t, cat.EnqueueCommand(cmd.Init))
+	require.NoError(t, cat.EnqueueCommand(cmds.Init))
 
 	// Allow workers to spin briefly.
 	time.Sleep(50 * time.Millisecond)
@@ -168,7 +168,7 @@ func TestEnqueueCommandFormatValidation(t *testing.T) {
 		},
 	}
 	cfg.CatCommands = []types.CatCommand{{
-		Name: cmd.Init.String(),
+		Name: cmds.Init.String(),
 		Cmd:  "CMD %s %s", // expects 2 parameters
 	}}
 
@@ -182,16 +182,16 @@ func TestEnqueueCommandFormatValidation(t *testing.T) {
 	service.started.Store(true)
 
 	// Happy path: correct parameter count.
-	err := service.EnqueueCommand(cmd.Init, "one", "two")
+	err := service.EnqueueCommand(cmds.Init, "one", "two")
 	require.NoError(t, err)
 
 	// Too few parameters.
-	err = service.EnqueueCommand(cmd.Init, "only-one")
+	err = service.EnqueueCommand(cmds.Init, "only-one")
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "Command parameter validation failed")
 
 	// Too many parameters.
-	err = service.EnqueueCommand(cmd.Init, "one", "two", "three")
+	err = service.EnqueueCommand(cmds.Init, "one", "two", "three")
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "Command parameter validation failed")
 }

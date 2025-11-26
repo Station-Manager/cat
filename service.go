@@ -2,8 +2,8 @@ package cat
 
 import (
 	"fmt"
-	"github.com/Station-Manager/cat/enums/cmd"
 	"github.com/Station-Manager/config"
+	"github.com/Station-Manager/enums/cmds"
 	"github.com/Station-Manager/errors"
 	"github.com/Station-Manager/logging"
 	"github.com/Station-Manager/serial"
@@ -198,7 +198,7 @@ func (s *Service) StatusChannel() (<-chan types.CatStatus, error) {
 
 // EnqueueCommand queues a command with the given name and parameters for execution, ensuring the service is initialized
 // and started. Returns an error if the service is not ready, the command lookup fails, or the sendChannel is full or closed.
-func (s *Service) EnqueueCommand(cmdName cmd.CatCmdName, params ...string) error {
+func (s *Service) EnqueueCommand(cmdName cmds.CatCmdName, params ...string) error {
 	const op errors.Op = "cat.Service.EnqueueCommand"
 	if !s.initialized.Load() {
 		return errors.New(op).Msg(errMsgServiceNotInit)
