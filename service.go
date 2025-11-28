@@ -16,7 +16,7 @@ const (
 	ServiceName = types.CatServiceName
 	// defaultListenerIntervalMS is used when the configured ListenerRateLimiterInterval
 	// is zero or negative, to avoid creating a ticker with a non-positive duration.
-	defaultListenerIntervalMS = 250
+	defaultListenerIntervalMS = 50
 )
 
 type runState struct {
@@ -76,8 +76,8 @@ func (s *Service) Initialize() error {
 
 		// Ensure sensible defaults for CAT timing configuration to avoid panics
 		// when creating tickers or timeouts with non-positive durations.
-		if cfg.CatConfig.ListenerRateLimiterInterval <= 0 {
-			cfg.CatConfig.ListenerRateLimiterInterval = defaultListenerIntervalMS
+		if cfg.CatConfig.ListenerRateLimiterIntervalMS <= 0 {
+			cfg.CatConfig.ListenerRateLimiterIntervalMS = defaultListenerIntervalMS
 		}
 		if cfg.CatConfig.ListenerReadTimeoutMS <= 0 {
 			cfg.CatConfig.ListenerReadTimeoutMS = cfg.SerialConfig.ReadTimeoutMS

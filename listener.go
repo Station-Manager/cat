@@ -15,7 +15,7 @@ const (
 
 // serialPortListener listens for and processes data from a serial port at a set interval until a shutdown signal is received.
 func (s *Service) serialPortListener(shutdown <-chan struct{}) {
-	readTicker := time.NewTicker(s.config.CatConfig.ListenerRateLimiterInterval * time.Millisecond)
+	readTicker := time.NewTicker(s.config.CatConfig.ListenerRateLimiterIntervalMS * time.Millisecond)
 	defer readTicker.Stop()
 
 	readTimeout := s.config.CatConfig.ListenerReadTimeoutMS
