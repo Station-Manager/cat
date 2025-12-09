@@ -3,12 +3,12 @@ module github.com/Station-Manager/cat
 go 1.25
 
 require (
-	github.com/Station-Manager/config v0.0.15
+	github.com/Station-Manager/config v0.0.21
 	github.com/Station-Manager/enums v0.0.1
-	github.com/Station-Manager/errors v0.0.5
+	github.com/Station-Manager/errors v0.0.9
 	github.com/Station-Manager/logging v0.0.7
 	github.com/Station-Manager/serial v0.0.4
-	github.com/Station-Manager/types v0.0.27
+	github.com/Station-Manager/types v0.0.48
 	github.com/go-playground/validator/v10 v10.28.0
 	github.com/stretchr/testify v1.11.1
 )
@@ -29,10 +29,10 @@ require (
 	github.com/rs/zerolog v1.34.0 // indirect
 	go.bug.st/serial v1.6.4 // indirect
 	go.uber.org/atomic v1.11.0 // indirect
-	golang.org/x/crypto v0.45.0 // indirect
-	golang.org/x/net v0.47.0 // indirect
-	golang.org/x/sys v0.38.0 // indirect
-	golang.org/x/text v0.31.0 // indirect
+	golang.org/x/crypto v0.46.0 // indirect
+	golang.org/x/net v0.48.0 // indirect
+	golang.org/x/sys v0.39.0 // indirect
+	golang.org/x/text v0.32.0 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
