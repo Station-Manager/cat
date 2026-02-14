@@ -3,21 +3,21 @@ module github.com/Station-Manager/cat
 go 1.25
 
 require (
-	github.com/Station-Manager/config v0.0.32
-	github.com/Station-Manager/enums v0.0.6
+	github.com/Station-Manager/config v0.0.40
+	github.com/Station-Manager/enums v0.0.8
 	github.com/Station-Manager/errors v0.0.11
-	github.com/Station-Manager/logging v0.0.11
-	github.com/Station-Manager/serial v0.0.5
-	github.com/Station-Manager/types v0.0.68
+	github.com/Station-Manager/logging v0.0.13
+	github.com/Station-Manager/serial v0.0.7
+	github.com/Station-Manager/types v0.0.78
 	github.com/go-playground/validator/v10 v10.30.1
 	github.com/stretchr/testify v1.11.1
 )
 
 require (
-	github.com/Station-Manager/utils v0.0.4 // indirect
+	github.com/Station-Manager/utils v0.0.6 // indirect
 	github.com/creack/goselect v0.1.3 // indirect
 	github.com/davecgh/go-spew v1.1.2-0.20180830191138-d8f796af33cc // indirect
-	github.com/gabriel-vasile/mimetype v1.4.12 // indirect
+	github.com/gabriel-vasile/mimetype v1.4.13 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/goccy/go-json v0.10.5 // indirect
@@ -29,10 +29,10 @@ require (
 	github.com/rs/zerolog v1.34.0 // indirect
 	go.bug.st/serial v1.6.4 // indirect
 	go.uber.org/atomic v1.11.0 // indirect
-	golang.org/x/crypto v0.46.0 // indirect
-	golang.org/x/net v0.48.0 // indirect
-	golang.org/x/sys v0.39.0 // indirect
-	golang.org/x/text v0.32.0 // indirect
+	golang.org/x/crypto v0.48.0 // indirect
+	golang.org/x/net v0.50.0 // indirect
+	golang.org/x/sys v0.41.0 // indirect
+	golang.org/x/text v0.34.0 // indirect
 	gopkg.in/natefinch/lumberjack.v2 v2.2.1 // indirect
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 )
