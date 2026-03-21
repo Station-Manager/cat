@@ -2,14 +2,15 @@ package cat
 
 import (
 	"fmt"
+	"sync"
+	"sync/atomic"
+
 	"github.com/Station-Manager/config"
 	"github.com/Station-Manager/enums/cmds"
 	"github.com/Station-Manager/errors"
 	"github.com/Station-Manager/logging"
 	"github.com/Station-Manager/serial"
 	"github.com/Station-Manager/types"
-	"sync"
-	"sync/atomic"
 )
 
 const (
@@ -35,7 +36,7 @@ type Service struct {
 	maxCatPrefixLen    int
 
 	initialized atomic.Bool
-	started     atomic.Bool // guarded via atomic operations; Start/Stop also hold mu for broader state
+	started     atomic.Bool // guarded via atomic operations; Start/Stop also hold mu for a broader state
 
 	initOnce sync.Once
 	mu       sync.Mutex
