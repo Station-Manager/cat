@@ -3,12 +3,12 @@ module github.com/Station-Manager/cat
 go 1.25.0
 
 require (
-	github.com/Station-Manager/config v0.0.40
+	github.com/Station-Manager/config v0.0.49
 	github.com/Station-Manager/enums v0.0.8
 	github.com/Station-Manager/errors v0.0.11
 	github.com/Station-Manager/logging v0.0.13
 	github.com/Station-Manager/serial v0.0.7
-	github.com/Station-Manager/types v0.0.78
+	github.com/Station-Manager/types v0.0.88
 	github.com/go-playground/validator/v10 v10.30.1
 	github.com/stretchr/testify v1.11.1
 )

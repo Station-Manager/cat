@@ -1,14 +1,15 @@
 package cat
 
 import (
+	"sync"
+	"testing"
+	"time"
+
 	"github.com/Station-Manager/config"
 	"github.com/Station-Manager/enums/cmds"
 	"github.com/Station-Manager/logging"
 	"github.com/Station-Manager/types"
 	"github.com/stretchr/testify/require"
-	"sync"
-	"testing"
-	"time"
 )
 
 func TestInitFailureNilConfigService(t *testing.T) {
@@ -163,6 +164,7 @@ func TestEnqueueCommandFormatValidation(t *testing.T) {
 	// Build a minimal in-memory Service with a single CatCommand using a format string.
 	cfg := &types.RigConfig{
 		CatConfig: types.CatConfig{
+			Enabled:               true,
 			SendChannelSize:       1,
 			ProcessingChannelSize: 1,
 		},

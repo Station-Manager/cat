@@ -109,6 +109,11 @@ func (s *Service) Start() error {
 		return errors.New(op).Msg(errMsgServiceNotInit)
 	}
 
+	if !s.config.CatConfig.Enabled {
+		s.LoggerService.InfoWith().Msg("CAT service is disabled in configuration; not starting.")
+		return nil
+	}
+
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
@@ -140,6 +145,10 @@ func (s *Service) Stop() error {
 	const op errors.Op = "cat.Service.Stop"
 	if !s.initialized.Load() {
 		return errors.New(op).Msg(errMsgServiceNotInit)
+	}
+
+	if !s.config.CatConfig.Enabled {
+		return nil
 	}
 
 	s.mu.Lock()
@@ -203,6 +212,11 @@ func (s *Service) EnqueueCommand(cmdName cmds.CatCmdName, params ...string) erro
 	const op errors.Op = "cat.Service.EnqueueCommand"
 	if !s.initialized.Load() {
 		return errors.New(op).Msg(errMsgServiceNotInit)
+	}
+
+	if !s.config.CatConfig.Enabled {
+		s.LoggerService.InfoWith().Msg("CAT service is disabled in configuration")
+		return nil
 	}
 
 	if !s.started.Load() {
